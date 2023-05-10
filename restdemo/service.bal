@@ -1,21 +1,39 @@
+import ballerina/uuid;
 import ballerina/http;
 
-# A service representing a network-accessible API
-# bound to port `9090`.
-@display {
-	label: "restdemo",
-	id: "restdemo-8e049af4-6a43-4e01-9530-90c14a69f5e2"
+enum Status {
+    reading = "reading",
+    read = "read",
+    to_read = "to_read"
 }
-service / on new http:Listener(9090) {
 
-    # A resource for generating greetings
-    # + name - the input string name
-    # + return - string name with hello message or error
-    resource function get greeting(string name) returns string|error {
-        // Send a response back to the caller.
-        if name is "" {
-            return error("name should not be empty!");
-        }
-        return "Hello, " + name;
+type BookItem record {|
+    string title;
+    string author;
+    string status;
+|};
+
+type Book record {|
+    *BookItem;
+    string id;
+|};
+
+map<Book> books = {};
+
+service /readinglist on new http:Listener(9090) {
+
+    resource function get books() returns Book[]|error? {
+        return books.toArray();
+    }
+
+    resource function post books(@http:Payload BookItem newBook) returns record {|*http:Ok;|}|error? {
+        string bookId = uuid:createType1AsString();
+        books[bookId] = {...newBook, id: bookId};
+        return {};
+    }
+
+    resource function delete books(string id) returns record {|*http:Ok;|}|error? {
+        _ = books.remove(id);
+        return {};
     }
 }
